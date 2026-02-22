@@ -11,18 +11,8 @@ const CourseList = ({ courses, userProgress }) => {
   const [showOrderHistory, setShowOrderHistory] = useState(false)
   const [showLicenseManagement, setShowLicenseManagement] = useState(false)
   const [userId] = useState('user_' + Date.now()) // Simulated user ID
-  const getCourseProgress = (course) => {
-    const totalChapters = course.chapters.length
-    const completedChapters = course.chapters.filter(
-      chapter => userProgress[`${course.id}-${chapter.id}`]?.completed
-    ).length
-    const inProgressChapters = course.chapters.filter(
-      chapter => {
-        const progress = userProgress[`${course.id}-${chapter.id}`]
-        return progress && progress.progress > 0 && !progress.completed
-      }
-    ).length
-    const handlePurchaseClick = (course) => {
+
+  const handlePurchaseClick = (course) => {
     setSelectedCourse(course)
     setShowPaymentModal(true)
   }
@@ -38,12 +28,30 @@ const CourseList = ({ courses, userProgress }) => {
     const binding = deviceFingerprintService.getDeviceBinding(userId, courseId)
     return binding && binding.isValid
   }
+  const getCourseProgress = (course) => {
+    const totalChapters = course.chapters?.length || 0
+    const completedChapters = course.chapters?.filter(
+      chapter => userProgress[`${course.id}-${chapter.id}`]?.completed
+    ).length || 0
+    const inProgressChapters = course.chapters?.filter(
+      chapter => {
+        const progress = userProgress[`${course.id}-${chapter.id}`]
+        return progress && progress.progress > 0 && !progress.completed
+      }
+    ).length || 0
+
+    return {
+      total: totalChapters,
+      completed: completedChapters,
+      inProgress: inProgressChapters
+    }
+  }
 
   const getLastWatchedChapter = (course) => {
     let lastWatched = null
     let lastTimestamp = 0
 
-    course.chapters.forEach(chapter => {
+    course.chapters?.forEach(chapter => {
       const progress = userProgress[`${course.id}-${chapter.id}`]
       if (progress && progress.lastWatched && progress.lastWatched > lastTimestamp) {
         lastTimestamp = progress.lastWatched
@@ -76,69 +84,78 @@ const CourseList = ({ courses, userProgress }) => {
         </div>
       </header>
 
-      <div className="courses-grid">
-        {courses.map(course => {
-          const progress = getCourseProgress(course)
-          const progressPercentage = (progress.completed / progress.total) * 100
+      {courses.length === 0 ? (
+        <div className="empty-state">
+          <div className="empty-icon">📚</div>
+          <h3>还没有课程</h3>
+          <p>请联系管理员创建课程或等待课程发布</p>
+        </div>
+      ) : (
+        <div className="courses-grid">
+          {courses.map(course => {
+            const progress = getCourseProgress(course)
+            const progressPercentage = progress.total > 0 ? (progress.completed / progress.total) * 100 : 0
+            const lastWatchedChapter = getLastWatchedChapter(course)
 
-          return (
-            <div key={course.id} className="course-card">
-              <div className="course-content">
-                <h2>{course.title}</h2>
-                <p>{course.description}</p>
+            return (
+              <div key={course.id} className="course-card">
+                <div className="course-content">
+                  <h2>{course.title}</h2>
+                  <p>{course.description}</p>
 
-                <div className="progress-section">
-                  <div className="progress-info">
-                    <span>进度: {progress.completed}/{progress.total} 章节</span>
-                    <span>{Math.round(progressPercentage)}%</span>
-                  </div>
-                  <div className="progress-bar">
-                    <div
-                      className="progress-fill"
-                      style={{ width: `${progressPercentage}%` }}
-                    ></div>
-                  </div>
-
-                  {/* Progress details */}
-                  <div className="progress-details">
-                    {progress.completed > 0 && (
-                      <span className="completed-count">✅ 已完成 {progress.completed} 章</span>
-                    )}
-                    {progress.inProgress > 0 && (
-                      <span className="in-progress-count">⏸️ 学习中 {progress.inProgress} 章</span>
-                    )}
-                    {progress.completed === 0 && progress.inProgress === 0 && (
-                      <span className="not-started">⭕ 未开始学习</span>
-                    )}
-                  </div>
-
-                  {/* Last watched chapter */}
-                  {lastWatchedChapter && (
-                    <div className="last-watched">
-                      📖 上次学到: {lastWatchedChapter.title}
+                  <div className="progress-section">
+                    <div className="progress-info">
+                      <span>进度: {progress.completed}/{progress.total} 章节</span>
+                      <span>{Math.round(progressPercentage)}%</span>
                     </div>
-                  )}
-                </div>
+                    <div className="progress-bar">
+                      <div
+                        className="progress-fill"
+                        style={{ width: `${progressPercentage}%` }}
+                      ></div>
+                    </div>
 
-                <div className="course-actions">
-                  {canAccessCourse(course.id) ? (
-                    <Link to={`/course/${course.id}`} className="start-btn">
-                      {progress.completed > 0 || progress.inProgress > 0 ? '继续学习' : '开始学习'}
-                    </Link>
-                  ) : (
-                    <button
-                      className="purchase-btn"
-                      onClick={() => handlePurchaseClick(course)}
-                    >
-                      购买课程 ¥99
-                    </button>
-                  )}
+                    {/* Progress details */}
+                    <div className="progress-details">
+                      {progress.completed > 0 && (
+                        <span className="completed-count">✅ 已完成 {progress.completed} 章</span>
+                      )}
+                      {progress.inProgress > 0 && (
+                        <span className="in-progress-count">⏸️ 学习中 {progress.inProgress} 章</span>
+                      )}
+                      {progress.completed === 0 && progress.inProgress === 0 && (
+                        <span className="not-started">⭕ 未开始学习</span>
+                      )}
+                    </div>
+
+                    {/* Last watched chapter */}
+                    {lastWatchedChapter && (
+                      <div className="last-watched">
+                        📖 上次学到: {lastWatchedChapter.title}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="course-actions">
+                    {canAccessCourse(course.id) ? (
+                      <Link to={`/course/${course.id}`} className="start-btn">
+                        {progress.completed > 0 || progress.inProgress > 0 ? '继续学习' : '开始学习'}
+                      </Link>
+                    ) : (
+                      <button
+                        className="purchase-btn"
+                        onClick={() => handlePurchaseClick(course)}
+                      >
+                        购买课程 ¥99
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-          )
-        })}
-      </div>
+            )
+          })}
+        </div>
+      )}
     </div>
 
     {/* Payment Modal */}
