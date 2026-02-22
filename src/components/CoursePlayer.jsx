@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import VideoPlayer from './VideoPlayer.jsx'
 import ChapterNavigation from './ChapterNavigation.jsx'
 import NotesPanel from './NotesPanel.jsx'
+import ContentProtection from './ContentProtection.jsx'
 
 const CoursePlayer = ({ courses, userProgress, updateProgress }) => {
   const { courseId } = useParams()
@@ -69,6 +70,7 @@ const CoursePlayer = ({ courses, userProgress, updateProgress }) => {
 
   return (
     <div className="course-player">
+      <ContentProtection />
       <header className="player-header">
         <button onClick={() => navigate('/')} className="back-btn">
           ← 返回课程列表

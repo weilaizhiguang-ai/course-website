@@ -6,6 +6,7 @@ const VideoPlayer = ({ chapter, onProgress, onNext, onPrev, hasNext, hasPrev }) 
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(0)
   const [playbackRate, setPlaybackRate] = useState(1)
+  const progressIntervalRef = useRef(null)
 
   // 模拟视频源 - 实际项目中应该使用真实的视频URL
   const mockVideoSources = {
@@ -41,21 +42,63 @@ const VideoPlayer = ({ chapter, onProgress, onNext, onPrev, hasNext, hasPrev }) 
 
     const handleLoadedMetadata = () => {
       setDuration(video.duration)
+      // Resume from saved position if available
+      const savedPosition = localStorage.getItem(`video-position-${chapter.id}`)
+      if (savedPosition) {
+        const position = parseFloat(savedPosition)
+        video.currentTime = position
+        setCurrentTime(position)
+      }
     }
 
     const handlePlay = () => setIsPlaying(true)
     const handlePause = () => setIsPlaying(false)
 
+    // Auto-save progress every 5 seconds
+    const startProgressSaving = () => {
+      progressIntervalRef.current = setInterval(() => {
+        if (video.currentTime > 0) {
+          localStorage.setItem(`video-position-${chapter.id}`, video.currentTime.toString())
+          localStorage.setItem(`video-timestamp-${chapter.id}`, Date.now().toString())
+        }
+      }, 5000)
+    }
+
+    const stopProgressSaving = () => {
+      if (progressIntervalRef.current) {
+        clearInterval(progressIntervalRef.current)
+        progressIntervalRef.current = null
+      }
+    }
+
+    const handlePlayStart = () => {
+      setIsPlaying(true)
+      startProgressSaving()
+    }
+
+    const handlePauseStop = () => {
+      setIsPlaying(false)
+      stopProgressSaving()
+      // Save final position when pausing
+      if (video.currentTime > 0) {
+        localStorage.setItem(`video-position-${chapter.id}`, video.currentTime.toString())
+        localStorage.setItem(`video-timestamp-${chapter.id}`, Date.now().toString())
+      }
+    }
+
     video.addEventListener('timeupdate', handleTimeUpdate)
     video.addEventListener('loadedmetadata', handleLoadedMetadata)
-    video.addEventListener('play', handlePlay)
-    video.addEventListener('pause', handlePause)
+    video.addEventListener('play', handlePlayStart)
+    video.addEventListener('pause', handlePauseStop)
+    video.addEventListener('ended', handlePauseStop)
 
     return () => {
       video.removeEventListener('timeupdate', handleTimeUpdate)
       video.removeEventListener('loadedmetadata', handleLoadedMetadata)
-      video.removeEventListener('play', handlePlay)
-      video.removeEventListener('pause', handlePause)
+      video.removeEventListener('play', handlePlayStart)
+      video.removeEventListener('pause', handlePauseStop)
+      video.removeEventListener('ended', handlePauseStop)
+      stopProgressSaving()
     }
   }, [chapter.id, onProgress])
 
@@ -99,6 +142,8 @@ const VideoPlayer = ({ chapter, onProgress, onNext, onPrev, hasNext, hasPrev }) 
           className="video-element"
           onContextMenu={(e) => e.preventDefault()} // 禁用右键菜单防止下载
           controlsList="nodownload" // 禁用下载控件
+          disablePictureInPicture // 禁用画中画
+          controls // 显示浏览器默认控件
         >
           {videoSources.map((source, index) => (
             <source key={index} src={source.src} type={source.type} />
@@ -111,6 +156,11 @@ const VideoPlayer = ({ chapter, onProgress, onNext, onPrev, hasNext, hasPrev }) 
           <div className="chapter-info">
             <h2>{chapter.title}</h2>
             <span className="duration">{chapter.duration}</span>
+            {localStorage.getItem(`video-position-${chapter.id}`) && (
+              <div className="resume-indicator">
+                ⏯️ 继续上次观看位置
+              </div>
+            )}
           </div>
         </div>
       </div>
