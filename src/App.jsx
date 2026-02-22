@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react'
 import { Routes, Route } from 'react-router-dom'
 import CoursePlayer from './components/CoursePlayer.jsx'
 import CourseListSimple from './components/CourseListSimple.jsx'
+import OrderHistoryPage from './components/OrderHistoryPage.jsx'
+import LicenseManagementPage from './components/LicenseManagementPage.jsx'
 // import CourseManagement from './components/CourseManagement.jsx'
 import CourseDatabase from './services/CourseDatabase.js'
 import './index.css'
@@ -47,6 +49,14 @@ function App() {
               updateProgress={updateProgress}
             />
           }
+        />
+        <Route
+          path="/orders"
+          element={<OrderHistoryPage />}
+        />
+        <Route
+          path="/licenses"
+          element={<LicenseManagementPage />}
         />
       </Routes>
     </div>
